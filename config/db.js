@@ -5,7 +5,7 @@ const connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'itinafairy',
+  database: 'node_auth_jwt',
 });
 
 connection.connect((err) => {
