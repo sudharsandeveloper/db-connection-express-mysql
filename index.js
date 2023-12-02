@@ -8,11 +8,8 @@ const jwt = require('jsonwebtoken');
 const secret = require('./config/secret-key.json');
 
 app.use(express.json())
-app.use(express.urlencoded({ extended : true }))
+// app.use(express.urlencoded({ extended : true }))
 
-app.use("/",(req, res)=>{
-    res.json('hello')
-})
 
 const verifyToken = (req, res, next) => {
     const token = req.headers.authorization.split(' ')[1];
@@ -33,7 +30,6 @@ const verifyToken = (req, res, next) => {
 app.get('/users', verifyToken, (req, res) => {
     connection.query('SELECT * FROM users', (error, results) => {
       if (error) {
-        console.error('Error:', error);
         res.status(500).send('Internal Server Error');
         return;
       }
@@ -56,6 +52,34 @@ app.get('/users', verifyToken, (req, res) => {
         res.json({ token });
     });
 });
+
+app.post('/login', (req, res) => {
+  const { email, password } = req.body;
+
+  connection.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
+    if (err) {
+      console.error('Error checking email:', err);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    const user = results[0];
+
+    if(password == user.password){
+      const token = jwt.sign(user.name , secret.secret);
+      res.json({ token });
+    }else{
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+  });
+});
+
+app.use("/",(req, res)=>{
+  res.json('hello');
+})
 
 app.listen(3000, () => {
   console.log('Server is running on port 3000');
