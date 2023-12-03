@@ -23,12 +23,17 @@ const verifyToken = (req, res, next) => {
         console.error('Error verifying token:', err);
         return res.status(401).json({ message: 'Failed to authenticate token' });
       }
+      req.decoded = decoded;
       next();
     });
   };
 
-app.get('/users', verifyToken, (req, res) => {
-    connection.query('SELECT * FROM users', (error, results) => {
+app.get('/profile', verifyToken, (req, res) => {
+
+  const decoded = req.decoded;
+  const userId = decoded.userId;
+    // console.log(userId)
+    connection.query('SELECT * from users where id = ?', [userId], (error, results) => {
       if (error) {
         res.status(500).send('Internal Server Error');
         return;
@@ -41,16 +46,43 @@ app.get('/users', verifyToken, (req, res) => {
     const {name, email, password, status} = req.body;
     // console.log(name, email, password, status);
     // return
-    connection.query('INSERT INTO users (name, email, password, status) VALUES (?, ?, ?, ?)', [name, email, password, status], (err) => {
-        if (err) {
-        console.error('Error registering user:', err);
-        return res.status(500).json({ message: 'Internal Server Error' });
-        }
 
-        const token = jwt.sign({name} , secret.secret);
+    connection.query('select * from users where email = ?', [email], (err, results) => {
+      // console.log(results);
+      // console.log(results.length)
+      if(results.length <= 0){
+        connection.query('INSERT INTO users (name, email, password, status) VALUES (?, ?, ?, ?)', [name, email, password, status], (err, results) => {
+          if (err) {
+          console.error('Error registering user:', err);
+          return res.status(500).json({ message: 'Internal Server Error' });
+          }
+  
+          const userId = results.insertId;
+          console.log(userId);
+          // res.json(results)
+  
+          const token = jwt.sign({ userId: userId } , secret.secret);
+  
+          res.json({ token });
+      });
+      }else{
+        res.json({message: 'This email already registered'})
+      }
+    })
+    // connection.query('INSERT INTO users (name, email, password, status) VALUES (?, ?, ?, ?)', [name, email, password, status], (err, results) => {
+    //     if (err) {
+    //     console.error('Error registering user:', err);
+    //     return res.status(500).json({ message: 'Internal Server Error' });
+    //     }
 
-        res.json({ token });
-    });
+    //     const userId = results.insertId;
+    //     console.log(userId);
+    //     // res.json(results)
+
+    //     const token = jwt.sign({ userId: userId } , secret.secret);
+
+    //     res.json({ token });
+    // });
 });
 
 app.post('/login', (req, res) => {
@@ -67,15 +99,17 @@ app.post('/login', (req, res) => {
     }
 
     const user = results[0];
-
+    // console.log(user)
+    // return
     if(password == user.password){
-      const token = jwt.sign(user.name , secret.secret);
+      const token = jwt.sign({ userId: user.id } , secret.secret);
       res.json({ token });
     }else{
       return res.status(401).json({ message: 'Invalid email or password' });
     }
   });
 });
+
 
 app.get('/',(req, res)=>{
   res.json('hello');
