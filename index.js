@@ -77,9 +77,13 @@ app.post('/login', (req, res) => {
   });
 });
 
-app.use("/",(req, res)=>{
+app.get('/',(req, res)=>{
   res.json('hello');
 })
+
+app.use((req, res) => {
+  res.status(404).send('This URL is Not Found');
+});
 
 app.listen(3000, () => {
   console.log('Server is running on port 3000');
